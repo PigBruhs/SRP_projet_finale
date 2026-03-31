@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>API测试</title>
+  <meta charset="UTF-8">
+</head>
+
+<body>
+  <h2>水稻病害识别API测试</h2>
+
+  <div>
+    <label>选择图片：</label>
+    <input type="file" id="imageInput" accept="image/*">
+  </div>
+
+  <div style="margin-top: 10px;">
+    <label>地区：</label>
+    <input type="text" id="regionInput" value="广东" placeholder="请输入地区">
+  </div>
+
+  <div style="margin-top: 10px;">
+    <button onclick="testAPI()">测试API</button>
+  </div>
+
+  <div id="result" style="margin-top: 20px; white-space: pre-wrap;"></div>
+
+  <script>
+    async function testAPI() {
+      const imageFile = document.getElementById('imageInput').files[0];
+      const region = document.getElementById('regionInput').value;
+      const resultDiv = document.getElementById('result');
+
+      if (!imageFile) {
+        resultDiv.textContent = '请选择图片文件';
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('image', imageFile);
+      formData.append('region', region);
+
+      try {
+        resultDiv.textContent = '正在发送请求...';
+
+        const response = await fetch('http://localhost:5000/api/v1/pest/identify', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        resultDiv.textContent = '请求成功！\n\n响应数据：\n' + JSON.stringify(data, null, 2);
+
+      } catch (error) {
+        resultDiv.textContent = '请求失败：\n' + error.message;
+        console.error('Error:', error);
+      }
+    }
+  </script>
+</body>
+
+</html>

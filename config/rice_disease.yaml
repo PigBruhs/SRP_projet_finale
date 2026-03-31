@@ -1,0 +1,18 @@
+path: "E:\\le projet\\Yolo_v8\\data\\split_dataset"
+train: train/images  # 相对path的路径
+val: val/images
+test: test/images    # 可选
+
+# 类别系统
+names:
+  0: Helminthosporium leaf blight # 胡麻叶枯病
+  1: Bakanae disease # 徒长病
+  2: Rice blast # 稻热病
+  3: Sheath blight # 纹枯病
+  4: Sheath rot # 叶鞘腐败病
+  5: Southern blight # 白绢病
+  6: Bacterial leaf blight # 白叶枯病
+  7: Bacterial leaf streak # 细菌性条斑病
+  8: White tip # 白尖病
+  9: Root knot nematode # 根瘤线虫
+  10: False smut # 稻曲病

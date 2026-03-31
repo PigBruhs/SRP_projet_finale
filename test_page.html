@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>水稻病害检测API测试</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      color: #333;
+      text-align: center;
+    }
+
+    .upload-section {
+      border: 2px dashed #ccc;
+      padding: 40px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .result-section {
+      margin-top: 30px;
+      padding: 20px;
+      border-radius: 10px;
+      display: none;
+    }
+
+    .result-section.success {
+      background-color: #d4edda;
+      border: 1px solid #c3e6cb;
+    }
+
+    .result-section.error {
+      background-color: #f8d7da;
+      border: 1px solid #f5c6cb;
+    }
+
+    .upload-btn {
+      background-color: #007bff;
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #fileInput {
+      display: none;
+    }
+
+    .preview-image {
+      max-width: 300px;
+      max-height: 300px;
+      margin: 20px auto;
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>🌾 水稻病害检测API测试</h1>
+
+    <div class="upload-section" id="uploadSection">
+      <p>请选择水稻病害图片进行检测</p>
+      <button class="upload-btn" onclick="document.getElementById('fileInput').click()">选择图片</button>
+      <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(event)">
+    </div>
+
+    <div class="result-section" id="resultSection">
+      <h3>识别结果</h3>
+      <div id="resultContent"></div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE_URL = 'http://localhost:5000';
+
+    function handleFileSelect(event) {
+      const file = event.target.files[0];
+      if (file) {
+        handleFile(file);
+      }
+    }
+
+    function handleFile(file) {
+      // 显示图片预览
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const img = document.createElement('img');
+        img.src = e.target.result;
+        img.className = 'preview-image';
+        img.id = 'previewImage';
+
+        const existingPreview = document.getElementById('previewImage');
+        if (existingPreview) {
+          existingPreview.remove();
+        }
+
+        document.getElementById('uploadSection').appendChild(img);
+      };
+      reader.readAsDataURL(file);
+
+      // 发送到API
+      uploadToAPI(file);
+    }
+
+    async function uploadToAPI(file) {
+      const resultSection = document.getElementById('resultSection');
+      const resultContent = document.getElementById('resultContent');
+
+      resultSection.style.display = 'block';
+      resultContent.innerHTML = '正在识别中，请稍候...';
+
+      try {
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('region', '网页测试');
+
+        const response = await fetch(`${API_BASE_URL}/api/v1/pest/identify`, {
+          method: 'POST',
+          body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.code === 0) {
+          resultSection.className = 'result-section success';
+          displaySuccessResult(result.data);
+        } else {
+          resultSection.className = 'result-section error';
+          displayErrorResult(result.msg);
+        }
+
+      } catch (error) {
+        resultSection.className = 'result-section error';
+        displayErrorResult('网络错误: ' + error.message);
+      }
+    }
+
+    function displaySuccessResult(data) {
+      const resultContent = document.getElementById('resultContent');
+
+      resultContent.innerHTML = `
+                <div><strong>病害类型:</strong> ${data.disease_type}</div>
+                <div><strong>置信度:</strong> ${(data.confidence * 100).toFixed(1)}%</div>
+                <div><strong>严重程度:</strong> ${data.severity}</div>
+                <div><strong>立即处理建议:</strong> ${data.suggestion.immediate}</div>
+                <div><strong>长期管理建议:</strong> ${data.suggestion.long_term}</div>
+            `;
+    }
+
+    function displayErrorResult(message) {
+      const resultContent = document.getElementById('resultContent');
+      resultContent.innerHTML = `<div><strong>错误信息:</strong> ${message}</div>`;
+    }
+  </script>
+</body>
+
+</html>
