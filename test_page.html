@@ -155,13 +155,17 @@
     function displaySuccessResult(data) {
       const resultContent = document.getElementById('resultContent');
 
-      resultContent.innerHTML = `
-                <div><strong>病害类型:</strong> ${data.disease_type}</div>
-                <div><strong>置信度:</strong> ${(data.confidence * 100).toFixed(1)}%</div>
-                <div><strong>严重程度:</strong> ${data.severity}</div>
-                <div><strong>立即处理建议:</strong> ${data.suggestion.immediate}</div>
-                <div><strong>长期管理建议:</strong> ${data.suggestion.long_term}</div>
-            `;
+      let html = `
+        <div><strong>病害类型:</strong> ${data.disease_type}</div>
+        <div><strong>置信度:</strong> ${(data.confidence * 100).toFixed(1)}%</div>
+        <div><strong>严重程度:</strong> ${data.severity}</div>
+        <div><strong>立即处理建议:</strong> ${data.suggestion.immediate}</div>
+        <div><strong>长期管理建议:</strong> ${data.suggestion.long_term}</div>
+      `;
+      if (data.inference_image) {
+        html += `<div style="margin-top:16px;"><strong>推理结果图片:</strong><br><img src='data:image/png;base64,${data.inference_image}' alt='推理结果图片' style='max-width:400px;max-height:400px;border:1px solid #ccc;'/></div>`;
+      }
+      resultContent.innerHTML = html;
     }
 
     function displayErrorResult(message) {

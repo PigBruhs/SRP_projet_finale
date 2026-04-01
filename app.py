@@ -11,6 +11,7 @@ import logging
 from datetime import datetime
 import json
 import time
+import torch  # 修复潜在的C0000005崩溃问题
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
@@ -36,17 +37,25 @@ class_names = [
 ]
 
 def load_model():
-    """加载训练好的模型"""
+    """加载训练好的模型（优先final_models文件夹）"""
     global model
     try:
-        # 优先使用best.pt，如果没有则使用last.pt
-        model_path = "runs/detect/train/weights/best.pt"
-        if not os.path.exists(model_path):
-            model_path = "runs/detect/train/weights/last.pt"
-        
-        if not os.path.exists(model_path):
-            raise FileNotFoundError(f"模型文件不存在: {model_path}")
-        
+        # 优先使用final_models中的best.pt和last.pt
+        model_paths = [
+            "final_models/best.pt",
+            "final_models/last.pt",
+            "runs/detect/train/weights/best.pt",
+            "runs/detect/train/weights/last.pt"
+        ]
+        model_path = None
+        for path in model_paths:
+            if os.path.exists(path):
+                model_path = path
+                break
+        if not model_path:
+            raise FileNotFoundError(f"未找到模型文件: {model_paths}")
+        print(f"[INFO] 加载模型权重: {model_path}")
+        from ultralytics import YOLO
         model = YOLO(model_path)
         logger.info(f"模型加载成功: {model_path}")
         return True
@@ -84,7 +93,7 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def format_predictions(results):
+def format_predictions(results, conf_thres=0.25):
     """格式化预测结果"""
     formatted_results = []
     
@@ -101,6 +110,10 @@ def format_predictions(results):
                 # 获取类别
                 class_id = int(box.cls[0].cpu().numpy())
                 class_name = class_names[class_id] if class_id < len(class_names) else f"Unknown_{class_id}"
+                
+                # 过滤低于阈值的预测
+                if confidence < conf_thres:
+                    continue
                 
                 formatted_results.append({
                     "class_id": class_id,
@@ -235,14 +248,34 @@ def pest_identify():
         # 转换为numpy数组
         image_array = np.array(image)
         
-        # 执行预测
+        # 执行预测（兼容ultralytics 8.0.196，不传conf/iou参数）
         start_time = time.time()
-        results = model(image_array, conf=0.25, iou=0.45)
-        process_time = int((time.time() - start_time) * 1000)  # 转换为毫秒
-        
-        # 格式化结果
-        predictions = format_predictions(results)
-        
+        results = model(image_array)
+        process_time = int((time.time() - start_time) * 1000)
+        logger.info(f"YOLO原始推理结果: {results}")
+        # 格式化结果（手动过滤置信度）
+        predictions = format_predictions(results, conf_thres=0.25)
+        logger.info(f"格式化后预测结果: {predictions}")
+
+        # 绘制推理结果图片并转为base64
+        try:
+            # YOLOv8的plot()方法返回PIL.Image
+            if hasattr(results, 'plot'):
+                result_img = results.plot()
+            elif hasattr(results[0], 'plot'):
+                result_img = results[0].plot()
+            else:
+                # 兼容性处理：手动绘制
+                result_img = image.copy()
+            buffered = io.BytesIO()
+            if isinstance(result_img, np.ndarray):
+                result_img = Image.fromarray(result_img)
+            result_img.save(buffered, format="PNG")
+            inference_image_base64 = base64.b64encode(buffered.getvalue()).decode()
+        except Exception as e:
+            logger.error(f"推理图片生成失败: {str(e)}")
+            inference_image_base64 = None
+
         # 如果没有检测到任何病害
         if not predictions:
             return jsonify({
@@ -264,7 +297,8 @@ def pest_identify():
                         "long_term": "保持良好的田间管理"
                     },
                     "model_version": "v2.3",
-                    "process_time": process_time
+                    "process_time": process_time,
+                    "inference_image": inference_image_base64
                 }
             })
         
@@ -321,7 +355,8 @@ def pest_identify():
                 "severity": severity,
                 "suggestion": suggestions,
                 "model_version": "v2.3",
-                "process_time": process_time
+                "process_time": process_time,
+                "inference_image": inference_image_base64
             }
         }
         

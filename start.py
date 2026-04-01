@@ -10,23 +10,25 @@ from pathlib import Path
 
 def check_dependencies():
     """检查依赖是否安装"""
-    required_packages = [
-        'flask', 'ultralytics', 'opencv-python', 
-        'pillow', 'numpy', 'torch'
-    ]
-    
+    # 包名到import名的映射
+    import_map = {
+        'flask': 'flask',
+        'ultralytics': 'ultralytics',
+        'opencv-python': 'cv2',
+        'pillow': 'PIL',
+        'numpy': 'numpy',
+        'torch': 'torch'
+    }
     missing_packages = []
-    for package in required_packages:
+    for pkg, import_name in import_map.items():
         try:
-            __import__(package.replace('-', '_'))
+            __import__(import_name)
         except ImportError:
-            missing_packages.append(package)
-    
+            missing_packages.append(pkg)
     if missing_packages:
         print(f"❌ 缺少以下依赖包: {', '.join(missing_packages)}")
         print("请运行: pip install -r requirements.txt")
         return False
-    
     print("✅ 所有依赖包已安装")
     return True
 
