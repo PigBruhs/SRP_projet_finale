@@ -106,4 +106,4 @@ auto_augment: randaugment
 erasing: 0.4
 cfg: null
 tracker: botsort.yaml
-save_dir: E:\le projet\SRP_1_张琨博\runs\detect\train5
+save_dir: ./runs\detect\train5
