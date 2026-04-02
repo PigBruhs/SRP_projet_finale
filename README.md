@@ -461,9 +461,3 @@ python start.py --debug
 ## 贡献
 
 欢迎提交Issue和Pull Request！
-
-## 联系方式
-
-- 项目维护者: 张琨博
-- 邮箱: [your-email@example.com]
-- 项目地址: [your-repo-url]
